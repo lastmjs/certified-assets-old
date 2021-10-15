@@ -495,6 +495,7 @@ fn create_strategy(
 }
 
 fn build_200(
+    path: &str,
     asset: &Asset,
     enc_name: &str,
     enc: &AssetEncoding,
@@ -502,7 +503,11 @@ fn build_200(
     chunk_index: usize,
     certificate_header: Option<HeaderField>,
 ) -> HttpResponse {
-    let mut headers = vec![("Content-Type".to_string(), asset.content_type.to_string())];
+    // let mut headers = vec![("Content-Type".to_string(), asset.content_type.to_string())];
+    let mut headers = build_headers(
+        asset,
+        path
+    );
     if enc_name != "identity" {
         headers.push(("Content-Encoding".to_string(), enc_name.to_string()));
     }
@@ -518,6 +523,29 @@ fn build_200(
         body: enc.content_chunks[chunk_index].clone(),
         streaming_strategy,
     }
+}
+
+fn build_headers(
+    asset: &Asset,
+    path: &str
+) -> Vec<(String, String)> {
+    ic_cdk::println!("build_headers path: {}", path);
+
+    if path.ends_with(".gz") {
+        return vec![
+            // ("Content-Type".to_string(), asset.content_type.to_string())
+            ("Content-Encoding".to_string(), "gzip".to_string())
+        ];
+    }
+
+    if path.ends_with(".br") {
+        return vec![
+            // ("Content-Type".to_string(), asset.content_type.to_string())
+            ("Content-Encoding".to_string(), "br".to_string())
+        ];
+    }
+
+    return vec![("Content-Type".to_string(), asset.content_type.to_string())];
 }
 
 fn build_404(certificate_header: HeaderField) -> HttpResponse {
@@ -551,6 +579,7 @@ fn build_http_response(path: &str, encodings: Vec<String>, index: usize) -> Http
                     if let Some(enc) = asset.encodings.get(enc_name) {
                         if enc.certified {
                             return build_200(
+                                path,
                                 asset,
                                 enc_name,
                                 enc,
@@ -572,6 +601,7 @@ fn build_http_response(path: &str, encodings: Vec<String>, index: usize) -> Http
                 if let Some(enc) = asset.encodings.get(enc_name) {
                     if enc.certified {
                         return build_200(
+                            path,
                             asset,
                             enc_name,
                             enc,
@@ -584,6 +614,7 @@ fn build_http_response(path: &str, encodings: Vec<String>, index: usize) -> Http
                         if let Some(id_enc) = asset.encodings.get("identity") {
                             if id_enc.certified {
                                 return build_200(
+                                    path,
                                     asset,
                                     enc_name,
                                     enc,
